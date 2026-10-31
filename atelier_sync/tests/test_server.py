@@ -260,7 +260,7 @@ class StoreTests(unittest.TestCase):
         state["appointments"] = [appointment(status="completed", color="#17a9Ef")]
         state["expenses"] = [expense()]
         state["settings"]["agendaRanges"] = [{"id": "r1", "effectiveFrom": "2020-01-01", "start": "08:30", "lastStart": "17:45", "createdAt": STAMP}]
-        self.assertEqual(validate_state(state), state)
+        self.assertEqual(validate_state(state), {**state, "suppliers": []})
         bad = copy.deepcopy(state); bad["expenses"][0]["amount"] = 1.005
         with self.assertRaises(ValueError): validate_state(bad)
         bad = copy.deepcopy(state); bad["appointments"][0]["date"] = "2026-02-30"
@@ -354,7 +354,8 @@ class HTTPTests(unittest.TestCase):
     def test_public_status_and_page_never_expose_agenda_or_tokens(self):
         status, body = self.request("/v1/status")
         self.assertEqual(status, 200)
-        self.assertEqual(set(body), {"protocol", "workspaceId", "initialized"})
+        self.assertEqual(set(body), {"protocol", "capabilities", "workspaceId", "initialized"})
+        self.assertEqual(body["capabilities"], ["suppliers-v1"])
         status, page = self.request("/", method="GET")
         self.assertEqual(status, 200)
         self.assertNotIn(PAIRING, page)
@@ -363,10 +364,12 @@ class HTTPTests(unittest.TestCase):
     def test_http_authentication_initialization_and_pull(self):
         status, registration = self.request("/v1/register", {"pairingKey": PAIRING, "deviceId": "tablet", "role": "master", "name": "Tabletă"})
         self.assertEqual(status, 200)
+        self.assertEqual(registration["capabilities"], ["suppliers-v1"])
         body = {"deviceId": "tablet", "workspaceId": registration["workspaceId"], "operations": [], "bootstrap": agenda(), "bootstrapId": "b1"}
         self.assertEqual(self.request("/v1/sync", body)[0], 401)
         status, result = self.request("/v1/sync", body, registration["token"])
         self.assertEqual(status, 200)
+        self.assertEqual(result["capabilities"], ["suppliers-v1"])
         self.assertEqual(result["serverRevision"], 1)
         del body["bootstrap"]; del body["bootstrapId"]
         self.assertEqual(self.request("/v1/sync", body, registration["token"])[1]["state"]["clients"][0]["name"], "Ana")

@@ -30,7 +30,7 @@ class SchemaParityTests(unittest.TestCase):
           console.log(JSON.stringify([c.validateState(old),c.validateState(current)]));
         """)
         for state in states:
-            expected = {**state, "expenses": state.get("expenses", [])}
+            expected = {**state, "expenses": state.get("expenses", []), "suppliers": state.get("suppliers", [])}
             self.assertEqual(validate_state(state), expected)
 
     def test_unicode_whitespace_and_phone_digits_normalize_like_the_android_validator(self):
@@ -39,7 +39,7 @@ class SchemaParityTests(unittest.TestCase):
           s.clients[0].name='\\ufeffAna\\ufeff'; s.clients[0].phone='٠٧٢٢';
           console.log(JSON.stringify([s,c.validateState(s)]));
         """)
-        self.assertEqual(validate_state(raw), {**expected, "expenses": []})
+        self.assertEqual(validate_state(raw), {**expected, "expenses": [], "suppliers": []})
 
     def test_js_utf16_length_and_ascii_clock_rejections_are_preserved(self):
         cases = self.js("""
@@ -50,3 +50,25 @@ class SchemaParityTests(unittest.TestCase):
         for case in cases:
             self.assertTrue(case["rejected"])
             with self.assertRaises(ValueError): validate_state(case["s"])
+
+    def test_supplier_catalog_pairs_and_historical_names_match_android(self):
+        cases = self.js("""
+          const legacy=c.createDemo('2026-10-31');
+          const valid=c.createDemo('2026-10-31');
+          valid.suppliers=[{id:'supplier1',name:' \\ufeffFurnizor curent\\ufeff '},{id:'supplier2',name:'Furnizor curent'}];
+          valid.expenses=[{id:'e1',date:'2026-10-31',amount:12.34,description:'Consumabile',createdAt:'',updatedAt:'',supplierId:'supplier1',supplierName:' \\ufeffNume istoric\\ufeff '}];
+          const missing=structuredClone(valid);delete missing.expenses[0].supplierName;
+          const orphan=structuredClone(valid);orphan.expenses[0].supplierId='missing';
+          const duplicates=structuredClone(valid);duplicates.suppliers[1].id='supplier1';
+          const long=structuredClone(valid);long.suppliers[0].name='💅'.repeat(76);
+          console.log(JSON.stringify([legacy,valid,missing,orphan,duplicates,long].map(s=>{try{return {raw:s,normalized:c.validateState(s),rejected:false}}catch(e){return {raw:s,rejected:true}}})));
+        """)
+        self.assertFalse(cases[0]["rejected"])
+        self.assertFalse(cases[1]["rejected"])
+        self.assertTrue(all(case["rejected"] for case in cases[2:]))
+        for case in cases:
+            if case["rejected"]:
+                with self.assertRaises(ValueError): validate_state(case["raw"])
+            else:
+                normalized = case["normalized"]
+                self.assertEqual(validate_state(case["raw"]), {**normalized, "expenses": normalized.get("expenses", []), "suppliers": normalized.get("suppliers", [])})

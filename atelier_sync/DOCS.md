@@ -4,6 +4,14 @@ Serviciu privat de sincronizare pentru agenda Atelier. Tableta și telefonul pă
 
 Home Assistant este gazda serviciului. Datele Atelier sunt în propria bază SQLite, `/data/atelier-sync.sqlite3`, nu în baza Home Assistant. Aplicația nu cere acces administrativ la Home Assistant, Supervisor sau dispozitivele casei.
 
+## Furnizori și actualizare la 0.2.0
+
+Pentru furnizorii cheltuielilor, actualizează aplicația Home Assistant **Atelier Sync la 0.2.0** și aplicația Android **Atelier la 0.3.2 sau mai nouă** pe tabletă și telefon. Actualizează întâi serviciul HA. Opțiunile de configurare, cheia de asociere și portul rămân aceleași; baza existentă, asocierile și operațiile confirmate sunt păstrate. Fă înainte un backup și păstrează directorul `/data` al aplicației.
+
+Furnizorii sunt salvați într-un catalog comun. Fiecare cheltuială păstrează numele furnizorului de la înregistrarea ei, chiar dacă denumirea din catalog se schimbă ulterior. Cheltuielile vechi rămân valide fără furnizor. Un furnizor folosit de cheltuieli nu poate fi șters fără rezolvarea acelor referințe în aceeași operație.
+
+Versiunea Android nouă verifică suportul `suppliers-v1` înainte de conectare și sincronizare. Dacă serviciul HA este vechi, cere actualizarea lui și păstrează datele și modificările locale nesincronizate. Versiunile Android vechi pot folosi în continuare înregistrări fără furnizor; editarea unei cheltuieli care conține deja furnizor poate produce un conflict. Actualizează ambele dispozitive înainte de folosirea acestei funcții.
+
 ## Instalare locală în Home Assistant OS
 
 1. Copiază acest director, inclusiv `config.yaml`, `Dockerfile`, `server.py` și `validation.py`, în directorul local `/addons/atelier_sync/` al sistemului Home Assistant OS.

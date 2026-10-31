@@ -25,11 +25,12 @@ from validation import (ValidationError, identifier, obj, text, timestamp,
                         reject_overlaps, retain_audit, semantic_equal, validate_state)
 
 PROTOCOL = 1
+CAPABILITIES = ("suppliers-v1",)
 MAX_BODY = 32 * 1024 * 1024
 MAX_STATE = 30 * 1024 * 1024
 MAX_OPERATIONS = 50
 MAX_REVISION = 9007199254740991
-ENTITY_TYPES = ("clients", "services", "appointments", "expenses")
+ENTITY_TYPES = ("clients", "services", "appointments", "expenses", "suppliers")
 LOGGER = logging.getLogger("atelier_sync")
 
 
@@ -136,7 +137,7 @@ class Store:
 
     def status(self):
         with self.connection() as db:
-            return {"protocol": PROTOCOL, "workspaceId": self._meta(db, "workspace_id"), "initialized": self._meta(db, "initialized") == "1"}
+            return {"protocol": PROTOCOL, "capabilities": list(CAPABILITIES), "workspaceId": self._meta(db, "workspace_id"), "initialized": self._meta(db, "initialized") == "1"}
 
     def register(self, body):
         try:
@@ -159,7 +160,7 @@ class Store:
             token = hmac.new(secret, (device_id + "\0" + nonce).encode("utf-8"), hashlib.sha256).hexdigest()
             digest = hashlib.sha256(token.encode("ascii")).hexdigest()
             db.execute("INSERT INTO devices(device_id,token_hash,token_nonce,role,name,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(device_id) DO UPDATE SET name=excluded.name,role=excluded.role", (device_id, digest, nonce, role, name, utc_now()))
-            result = {"protocol": PROTOCOL, "workspaceId": self._meta(db, "workspace_id"), "token": token, "initialized": self._meta(db, "initialized") == "1"}
+            result = {"protocol": PROTOCOL, "capabilities": list(CAPABILITIES), "workspaceId": self._meta(db, "workspace_id"), "token": token, "initialized": self._meta(db, "initialized") == "1"}
             db.commit()
             return result
 
@@ -302,7 +303,7 @@ class Store:
             for operation in operations:
                 result, live = self._operation(db, device_id, operation, live)
                 results.append(result)
-            response = {"protocol": PROTOCOL, "workspaceId": workspace, "initialized": True, "serverRevision": int(self._meta(db, "revision")), "results": results, "state": validate_state(unflatten(live))}
+            response = {"protocol": PROTOCOL, "capabilities": list(CAPABILITIES), "workspaceId": workspace, "initialized": True, "serverRevision": int(self._meta(db, "revision")), "results": results, "state": validate_state(unflatten(live))}
             db.commit()
             return response
 
@@ -331,7 +332,7 @@ class Store:
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.0"
-    server_version = "AtelierSync/1"
+    server_version = "AtelierSync/0.2.0"
     sys_version = ""
 
     def setup(self):

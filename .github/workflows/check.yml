@@ -28,6 +28,7 @@ jobs:
                   with urllib.request.urlopen(req, timeout=3) as response:
                       state = json.load(response)
                   assert state['protocol'] == 1 and state['initialized'] is False
+                  assert 'suppliers-v1' in state['capabilities']
                   print('Container API is ready')
                   break
               except Exception:

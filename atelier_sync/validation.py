@@ -290,15 +290,35 @@ def validate_state(raw):
             result["corrections"] = history
         appointments.append(result)
     unique(appointments)
+    suppliers = []
+    for supplier in array(raw.get("suppliers", []), 10000):
+        supplier = obj(supplier)
+        name = text(supplier.get("name"), 150).strip(JS_WHITESPACE)
+        if not name:
+            fail("Numele furnizorului este obligatoriu.")
+        suppliers.append({"id": identifier(supplier.get("id")), "name": name})
+    unique(suppliers)
+    supplier_ids = {supplier["id"] for supplier in suppliers}
     expenses = []
     for x in array(raw.get("expenses", []), 200000):
         x = obj(x)
         amount = number(x.get("amount"), .01, 1000000)
         if abs(amount * 100 - round(amount * 100)) > .000001:
             fail()
-        expenses.append({"id": identifier(x.get("id")), "date": date(x.get("date")), "amount": amount, "description": optional_text(x, "description", 500), "createdAt": optional_text(x, "createdAt", 50), "updatedAt": optional_text(x, "updatedAt", 50)})
+        result = {"id": identifier(x.get("id")), "date": date(x.get("date")), "amount": amount, "description": optional_text(x, "description", 500), "createdAt": optional_text(x, "createdAt", 50), "updatedAt": optional_text(x, "updatedAt", 50)}
+        if ("supplierId" in x) != ("supplierName" in x):
+            fail("Furnizorul cheltuielii trebuie să conțină identificatorul și numele salvat.")
+        if "supplierId" in x:
+            supplier_id = identifier(x["supplierId"])
+            supplier_name = text(x["supplierName"], 150).strip(JS_WHITESPACE)
+            if not supplier_name:
+                fail("Numele furnizorului cheltuielii este obligatoriu.")
+            if supplier_id not in supplier_ids:
+                fail("O cheltuială face referire la un furnizor inexistent.")
+            result.update(supplierId=supplier_id, supplierName=supplier_name)
+        expenses.append(result)
     unique(expenses)
-    return {"version": 1, "demo": bool(raw.get("demo", False)), "settings": settings, "clients": clients, "services": services, "appointments": appointments, "expenses": expenses}
+    return {"version": 1, "demo": bool(raw.get("demo", False)), "settings": settings, "clients": clients, "services": services, "appointments": appointments, "expenses": expenses, "suppliers": suppliers}
 
 
 def reject_overlaps(state):

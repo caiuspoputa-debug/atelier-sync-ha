@@ -238,7 +238,14 @@ def validate_state(raw):
         name = text(c.get("name"), 150).strip(JS_WHITESPACE)
         if not name:
             fail()
-        clients.append({"id": identifier(c.get("id")), "name": name, "phone": normalize_phone(legacy_text(c, "phone", 40)), "notes": legacy_text(c, "notes", 5000), "archived": bool(c.get("archived", False))})
+        client = {"id": identifier(c.get("id")), "name": name, "phone": normalize_phone(legacy_text(c, "phone", 40)), "notes": legacy_text(c, "notes", 5000), "archived": bool(c.get("archived", False))}
+        if "deleted" in c:
+            if type(c["deleted"]) is not bool:
+                fail("Starea de ștergere a clientului nu este validă.")
+            client["deleted"] = c["deleted"]
+            if c["deleted"] and (not client["archived"] or client["phone"] or client["notes"]):
+                fail("Clientul șters trebuie arhivat, fără telefon sau observații de contact.")
+        clients.append(client)
     unique(clients)
     client_ids = {c["id"] for c in clients}
     services = []
@@ -329,6 +336,22 @@ def reject_overlaps(state):
         if current == day and start < end:
             fail("Programările se suprapun. Verifică intervalele înainte de sincronizare.")
         day, end = current, finish
+
+
+def validate_client_transitions(previous, candidate):
+    """Keep deleted identities for history without allowing reuse or silent revival."""
+    originals = {c["id"]: c for c in previous["clients"]}
+    for client in candidate["clients"]:
+        before = originals.get(client["id"])
+        if before and before.get("deleted") is True and client.get("deleted") is not True:
+            fail("Clientul șters nu poate fi reactivat prin eliminarea stării de ștergere.")
+    deleted = {c["id"] for c in candidate["clients"] if c.get("deleted") is True}
+    appointments = {a["id"]: a for a in previous["appointments"]}
+    for appointment in candidate["appointments"]:
+        if appointment["clientId"] in deleted:
+            before = appointments.get(appointment["id"])
+            if before is None or before["clientId"] != appointment["clientId"]:
+                fail("Nu poți adăuga sau reasigna o programare unui client șters. Istoricul existent rămâne păstrat.")
 
 
 def retain_audit(previous, candidate):

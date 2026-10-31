@@ -4,13 +4,13 @@ All API calls are `POST` with `Content-Type: application/json`. Text is UTF-8. R
 
 ## Status and registration
 
-`POST /v1/status {}` is public and returns only `{protocol:1,capabilities:["suppliers-v1"],workspaceId,initialized}`. `GET /` is a minimal public health page with no agenda data.
+`POST /v1/status {}` is public and returns only `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1"],workspaceId,initialized}`. `GET /` is a minimal public health page with no agenda data.
 
 `POST /v1/register` accepts `{pairingKey,deviceId,role,name}`. `role` is `master` or `secondary`. IDs are nonempty strings up to 100 characters, and names are nonempty strings up to 150 characters. A valid configured pairing key is required. Re-registering an existing ID returns the same token; an authorized registration can update its name and role. Secondary devices can register before initialization.
 
-The result is `{protocol:1,capabilities:["suppliers-v1"],workspaceId,token,initialized}`. Authentication for sync is `Authorization: Bearer <token>`, bound to the registered `deviceId`. Changing the pairing key does not revoke prior tokens; deleting a device association does.
+The result is `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1"],workspaceId,token,initialized}`. Authentication for sync is `Authorization: Bearer <token>`, bound to the registered `deviceId`. Changing the pairing key does not revoke prior tokens; deleting a device association does.
 
-Atelier Sync 0.2.0 advertises `suppliers-v1` on status, registration, and synchronization responses. New Android clients include `capabilities:["suppliers-v1"]` on their requests and require this response capability before registration, bootstrap, joining, uploading operations, or accepting a reply. If it is absent, they must keep the local agenda and outbox intact and ask the user to update the HA application. This prevents older servers from accepting and stripping supplier information. Older clients remain usable with ordinary legacy records; they are not globally rejected by the new server.
+Atelier Sync 0.3.0 advertises `suppliers-v1` and `client-deletion-v1` on status, registration, and synchronization responses. New Android clients include `capabilities:["suppliers-v1","client-deletion-v1"]` on their requests and require this response capability before registration, bootstrap, joining, uploading operations, or accepting a reply. If it is absent, they must keep the local agenda and outbox intact and ask the user to update the HA application. This prevents older servers from accepting and stripping supplier information or deleted-client markers. Update every device before using client deletion: older clients do not understand deleted identities even though ordinary legacy operations remain supported. Older clients remain usable with ordinary legacy records; they are not globally rejected by the new server.
 
 ## Synchronization
 
@@ -36,6 +36,10 @@ Entity keys are exactly `settings`, `meta`, `clients/<id>`, `services/<id>`, `ap
 
 The optional schema-1 `suppliers` catalog contains at most 10,000 `{id,name}` records. IDs are unique nonempty strings of at most 100 UTF-16 code units. Names are nonempty trimmed strings of at most 150 UTF-16 code units; duplicate names remain valid for concurrent offline additions. An expense may contain the optional pair `supplierId` and `supplierName`; both must be present or both absent. The ID must reference a catalog entry. `supplierName` is a nonempty trimmed historical name of at most 150 UTF-16 code units and may differ from the current catalog name. Renaming a supplier never changes purchase snapshots. Legacy expenses keep both fields absent. A referenced supplier cannot be deleted unless the same atomic operation removes or updates all its references.
 
+A client may include the optional strictly boolean `deleted` field; absent and explicit `false` remain distinct CAS values and legacy absence is preserved. If `deleted:true`, `archived` must normalize to `true`, while the phone and contact notes must be empty. The original client ID and name remain available to every current appointment and correction snapshot. Physical removal is valid only when no current or audit snapshot references the ID; there is no automatic cascade deletion.
+
+After initialization, an existing deleted identity cannot be revived by removing or clearing `deleted`. A candidate appointment whose current `clientId` is deleted is accepted only if that appointment ID already existed with the same `clientId` immediately before the atomic operation. New appointments and reassignment to a deleted identity are rejected for every status, including cancellation. Existing same-client appointments may change status, schedule, price or other fields under the existing overlap and completed-record audit rules. A valid first bootstrap may contain deleted identities and their historical appointments; the transition guard is intentionally not applied to initial recovery. A stale client whose `before` omits a stored marker receives a normal CAS conflict; an exact `before` followed by attempted revival is rejected atomically.
+
 Each `before` must equal the live entity by semantic JSON comparison: object key order is irrelevant, array order is retained, and booleans are distinct from numbers. All changes in an operation are validated together against the aggregate agenda. Client references, schema 1, money, audit history, and overlapping noncancelled bookings are checked. Dates and local `HH:mm` values are stored as entered; no server-clock restriction is imposed on offline history.
 
 Operation IDs are global and stable. A canonical payload hash sorts object keys and retains array order. An exact retry from the same device returns its persisted result without applying the operation again. Reusing an ID with another payload or device is rejected. Conflict and rejection receipts are durable too; a consciously resolved/rebased change needs a new operation ID.
@@ -45,7 +49,7 @@ All changes and their receipt commit atomically. Independent later operations in
 ```json
 {
   "protocol": 1,
-  "capabilities": ["suppliers-v1"],
+  "capabilities": ["suppliers-v1","client-deletion-v1"],
   "workspaceId": "workspace-id",
   "initialized": true,
   "serverRevision": 2,

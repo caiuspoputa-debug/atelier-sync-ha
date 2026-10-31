@@ -1,5 +1,5 @@
 name: Atelier Sync
-version: "0.2.0"
+version: "0.3.0"
 slug: atelier_sync
 description: Sincronizare privată pentru agenda Atelier, cu stocare persistentă proprie.
 arch:

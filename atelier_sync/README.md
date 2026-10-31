@@ -4,6 +4,16 @@ Serviciu privat de sincronizare pentru agenda Atelier. Tableta și telefonul pă
 
 Home Assistant este gazda serviciului. Datele Atelier sunt în propria bază SQLite, `/data/atelier-sync.sqlite3`, nu în baza Home Assistant. Aplicația nu cere acces administrativ la Home Assistant, Supervisor sau dispozitivele casei.
 
+## Ștergerea clienților și actualizare la 0.3.0
+
+Pentru funcția **Șterge clientul**, actualizează întâi Atelier Sync la **0.3.0**, apoi aplicația Atelier pe toate dispozitivele. Fă înainte un backup. Baza SQLite existentă, asocierile, cheia, portul, programările și rezultatele operațiilor se păstrează; nu este necesară reinițializarea serverului.
+
+Un client fără referințe în programări sau în istoricul corecțiilor poate fi eliminat complet. Pentru un client referit de istoric se păstrează identificatorul și numele, cu `deleted:true` și `archived:true`, iar telefonul și observațiile de contact devin goale. Programările, numele afișat în istoric, serviciile, sumele și corecțiile lor nu sunt rescrise sau șterse.
+
+Serverul nu permite reactivarea acestei identități prin dispariția câmpului `deleted`, crearea unei programări noi pe ea sau reasignarea altei programări către ea. Programările deja existente pentru același client pot fi în continuare finalizate, anulate și corectate după regulile obișnuite de audit. Restaurarea inițială a unui backup valid care conține clienți șterși și programările lor rămâne acceptată.
+
+Versiunea nouă publică `client-deletion-v1` împreună cu `suppliers-v1`. Aplicațiile cu funcția de ștergere verifică aceste capabilități înainte de a trimite sau accepta date. Un serviciu HA mai vechi elimină câmpurile de client necunoscute și trebuie actualizat înaintea folosirii funcției. Actualizează și celelalte telefoane/tablete: aplicațiile vechi nu înțeleg ascunderea identităților șterse, iar editările lor pot produce conflicte sau refuzuri păstrând datele pe dispozitiv.
+
 ## Furnizori și actualizare la 0.2.0
 
 Pentru furnizorii cheltuielilor, actualizează aplicația Home Assistant **Atelier Sync la 0.2.0** și aplicația Android **Atelier la 0.3.2 sau mai nouă** pe tabletă și telefon. Actualizează întâi serviciul HA. Opțiunile de configurare, cheia de asociere și portul rămân aceleași; baza existentă, asocierile și operațiile confirmate sunt păstrate. Fă înainte un backup și păstrează directorul `/data` al aplicației.

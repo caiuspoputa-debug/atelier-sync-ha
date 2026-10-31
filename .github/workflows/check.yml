@@ -29,6 +29,7 @@ jobs:
                       state = json.load(response)
                   assert state['protocol'] == 1 and state['initialized'] is False
                   assert 'suppliers-v1' in state['capabilities']
+                  assert 'client-deletion-v1' in state['capabilities']
                   print('Container API is ready')
                   break
               except Exception:

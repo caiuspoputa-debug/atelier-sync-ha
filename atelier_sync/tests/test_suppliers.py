@@ -41,11 +41,11 @@ class SupplierTests(unittest.TestCase):
         return self.sync(bootstrap=state or agenda(), bootstrapId="suppliers-bootstrap")
 
     def test_capability_is_advertised_without_private_data_on_every_success_response(self):
-        self.assertEqual(self.store.status()["capabilities"], ["suppliers-v1"])
-        self.assertEqual(self.master["capabilities"], ["suppliers-v1"])
-        self.assertEqual(self.phone["capabilities"], ["suppliers-v1"])
-        self.assertEqual(self.boot()["capabilities"], ["suppliers-v1"])
-        self.assertEqual(self.sync(device="phone")["capabilities"], ["suppliers-v1"])
+        self.assertEqual(self.store.status()["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(self.master["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(self.phone["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(self.boot()["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(self.sync(device="phone")["capabilities"], ["suppliers-v1", "client-deletion-v1"])
         status = self.store.status()
         self.assertNotIn("state", status)
         self.assertNotIn("token", status)

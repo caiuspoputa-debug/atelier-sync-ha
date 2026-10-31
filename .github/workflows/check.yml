@@ -1,0 +1,40 @@
+name: Test and build
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Python tests
+        run: python3 -m unittest discover -s atelier_sync/tests -v
+      - name: Build add-on image
+        run: docker build -t atelier-sync:test atelier_sync
+      - name: Start service
+        run: docker run -d --name atelier-sync-test -p 127.0.0.1:18787:8787 -e ATELIER_PAIRING_KEY=ci-only-temporary-pairing-key atelier-sync:test
+      - name: Check running API
+        run: |
+          python3 - <<'PY'
+          import json, time, urllib.request
+          for attempt in range(20):
+              try:
+                  req = urllib.request.Request('http://127.0.0.1:18787/v1/status', data=b'{}', headers={'Content-Type':'application/json'})
+                  with urllib.request.urlopen(req, timeout=3) as response:
+                      state = json.load(response)
+                  assert state['protocol'] == 1 and state['initialized'] is False
+                  print('Container API is ready')
+                  break
+              except Exception:
+                  if attempt == 19:
+                      raise
+                  time.sleep(1)
+          PY
+      - name: Stop test container
+        if: always()
+        run: docker rm -f atelier-sync-test || true

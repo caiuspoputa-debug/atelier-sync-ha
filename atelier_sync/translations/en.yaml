@@ -1,0 +1,10 @@
+configuration:
+  pairing_key:
+    name: Pairing key
+    description: Private key of at least 16 characters used to pair the tablet and phone. Do not use a Home Assistant administrator token. Changing this key does not revoke existing device tokens.
+  backup_interval_hours:
+    name: Backup interval
+    description: Hours between automatic SQLite backups, from 1 to 24. Defaults to 6 hours. The current daily backup is refreshed on every run.
+  backup_retention_days:
+    name: Backup retention
+    description: Days to retain local daily backups, from 1 to 90. Defaults to 14 days. Keep a separate Home Assistant backup as well.

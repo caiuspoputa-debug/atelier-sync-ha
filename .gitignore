@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.sqlite*
+data/
+backups/
+options.json
+*.apk
+*.jks
+*.keystore
+.env

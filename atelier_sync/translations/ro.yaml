@@ -1,0 +1,10 @@
+configuration:
+  pairing_key:
+    name: Cheie de asociere
+    description: Cheie privată de minimum 16 caractere pentru asocierea tabletei și telefonului. Nu folosi tokenul administrativ Home Assistant. Schimbarea cheii nu revocă dispozitivele deja asociate.
+  backup_interval_hours:
+    name: Interval între copii de siguranță
+    description: Numărul de ore între copiile SQLite automate, între 1 și 24. Implicit 6 ore. Copia zilei curente este actualizată la fiecare rulare.
+  backup_retention_days:
+    name: Păstrarea copiilor de siguranță
+    description: Numărul de zile pentru care se păstrează copiile zilnice locale, între 1 și 90. Implicit 14 zile. Păstrează separat și un backup Home Assistant.

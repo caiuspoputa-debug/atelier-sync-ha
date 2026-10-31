@@ -1,0 +1,28 @@
+name: Atelier Sync
+version: "0.1.0"
+slug: atelier_sync
+description: Sincronizare privată pentru agenda Atelier, cu stocare persistentă proprie.
+arch:
+  - amd64
+  - aarch64
+startup: services
+boot: auto
+init: true
+ports:
+  8787/tcp: 8787
+ports_description:
+  8787/tcp: API Atelier Sync pentru rețeaua locală sau VPN
+options:
+  pairing_key: ""
+  backup_interval_hours: 6
+  backup_retention_days: 14
+schema:
+  pairing_key: password
+  backup_interval_hours: int(1,24)
+  backup_retention_days: int(1,90)
+homeassistant_api: false
+hassio_api: false
+ingress: false
+host_network: false
+webui: "http://[HOST]:[PORT:8787]"
+watchdog: "http://[HOST]:[PORT:8787]/"

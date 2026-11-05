@@ -91,3 +91,19 @@ Protocolul trimite agenda completă după sincronizare, cu maximum 50 de operaț
 Sursa este verificată prin teste Python și HTTP locale. Imaginea Docker și instalarea pe hardware Home Assistant trebuie verificate în mediul de destinație.
 
 Detaliile formatului de comunicație sunt în `PROTOCOL.md`.
+
+## Logo comun — 0.4.0
+
+Logo-ul personalizat din Setări este inclus în agenda sincronizată și în backup,
+în câmpul opțional `settings.workspace.logoData`. Sunt acceptate PNG-uri pregătite
+de aplicație, maximum 512 × 512 pixeli și 512 KiB. Valoarea `null` indică revenirea
+explicită la logo-ul implicit. Datele vechi păstrează câmpul absent.
+
+Pentru transmiterea unui logo nou sau a revenirii la cel implicit, actualizează
+Atelier Sync la **0.4.0** și aplicația pe dispozitivele folosite. Capabilitatea
+`salon-logo-v1` permite aplicației să verifice compatibilitatea. Funcțiile de
+sincronizare obișnuite rămân compatibile cu 0.3.0 până când se folosește logo-ul.
+Setările trimise de un dispozitiv vechi nu pot șterge implicit logo-ul deja salvat:
+serverul răspunde cu conflict sau refuz atomic, fără să piardă datele.
+
+Actualizarea add-on-ului păstrează baza SQLite, tokenurile și copiile existente.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+
+- Adds `salon-logo-v1` on status, registration and sync responses.
+- Preserves optional `settings.workspace.logoData` in synchronization, bootstrap and backups. A PNG data URL is limited to 512 × 512 pixels and 512 KiB; explicit `null` restores the built-in logo. Legacy records keep the field absent.
+- Validates canonical base64, PNG signature/header, chunk bounds/CRC and terminal IEND. External URLs, SVG, malformed images and animated PNG are rejected.
+- Prevents older-device settings from silently removing a shared logo or reset marker; explicit conflicts/rejections retain the previous agenda atomically. Ordinary legacy edits remain supported.
+- Keeps existing SQLite schema, device identities, tokens, receipts and business records without migration or reset.
+
 ## 0.3.0
 
 - Adds the `client-deletion-v1` capability alongside `suppliers-v1` on status, registration and sync responses.

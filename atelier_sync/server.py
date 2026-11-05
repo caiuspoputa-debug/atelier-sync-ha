@@ -23,10 +23,10 @@ from urllib.parse import urlsplit
 
 from validation import (ValidationError, identifier, obj, text, timestamp,
                         reject_overlaps, retain_audit, semantic_equal,
-                        validate_client_transitions, validate_state)
+                        validate_client_transitions, validate_logo_transition, validate_state)
 
 PROTOCOL = 1
-CAPABILITIES = ("suppliers-v1", "client-deletion-v1")
+CAPABILITIES = ("suppliers-v1", "client-deletion-v1", "salon-logo-v1")
 MAX_BODY = 32 * 1024 * 1024
 MAX_STATE = 30 * 1024 * 1024
 MAX_OPERATIONS = 50
@@ -263,6 +263,7 @@ class Store:
                 previous = validate_state(unflatten(live))
                 state = validate_state(unflatten(candidate))
                 validate_client_transitions(previous, state)
+                validate_logo_transition(previous, state)
                 ensure_state_size(state)
                 retain_audit(previous, state)
                 try:

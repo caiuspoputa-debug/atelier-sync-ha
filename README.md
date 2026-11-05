@@ -2,7 +2,7 @@
 
 Aceeași agendă pe tabletă și telefon, cu salvare locală și sincronizare prin Home Assistant. Telefonul poate trimite programări când tableta este oprită. Necesită aplicația Android Atelier cu protocol de sincronizare 1.
 
-Versiunea **0.2.0** adaugă furnizori pentru cheltuieli. Actualizează add-on-ul și aplicația Android la **0.3.2-test** pe toate dispozitivele; datele existente se păstrează. Aplicația nouă păstrează lucrul offline și cere actualizarea HA înainte să sincronizeze cu un add-on mai vechi.
+Versiunea **0.4.0** adaugă sincronizarea logo-ului salonului, pe lângă furnizori și protejarea clienților șterși. Logo-ul personalizat și revenirea la cel implicit sunt păstrate în backup și pe dispozitivele asociate. Actualizarea păstrează datele existente; pentru folosirea logo-ului comun sunt necesare aplicația actualizată și add-on-ul 0.4.0.
 
 [Adaugă repository-ul în Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fcaiuspoputa-debug%2Fatelier-sync-ha)
 

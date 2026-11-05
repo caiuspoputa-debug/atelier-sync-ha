@@ -355,7 +355,7 @@ class HTTPTests(unittest.TestCase):
         status, body = self.request("/v1/status")
         self.assertEqual(status, 200)
         self.assertEqual(set(body), {"protocol", "capabilities", "workspaceId", "initialized"})
-        self.assertEqual(body["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(body["capabilities"], ["suppliers-v1", "client-deletion-v1", "salon-logo-v1"])
         status, page = self.request("/", method="GET")
         self.assertEqual(status, 200)
         self.assertNotIn(PAIRING, page)
@@ -364,12 +364,12 @@ class HTTPTests(unittest.TestCase):
     def test_http_authentication_initialization_and_pull(self):
         status, registration = self.request("/v1/register", {"pairingKey": PAIRING, "deviceId": "tablet", "role": "master", "name": "Tabletă"})
         self.assertEqual(status, 200)
-        self.assertEqual(registration["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(registration["capabilities"], ["suppliers-v1", "client-deletion-v1", "salon-logo-v1"])
         body = {"deviceId": "tablet", "workspaceId": registration["workspaceId"], "operations": [], "bootstrap": agenda(), "bootstrapId": "b1"}
         self.assertEqual(self.request("/v1/sync", body)[0], 401)
         status, result = self.request("/v1/sync", body, registration["token"])
         self.assertEqual(status, 200)
-        self.assertEqual(result["capabilities"], ["suppliers-v1", "client-deletion-v1"])
+        self.assertEqual(result["capabilities"], ["suppliers-v1", "client-deletion-v1", "salon-logo-v1"])
         self.assertEqual(result["serverRevision"], 1)
         del body["bootstrap"]; del body["bootstrapId"]
         self.assertEqual(self.request("/v1/sync", body, registration["token"])[1]["state"]["clients"][0]["name"], "Ana")

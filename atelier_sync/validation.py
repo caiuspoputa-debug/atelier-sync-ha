@@ -6,9 +6,12 @@ here; the phone/tablet UI decides whether a newly entered start is in the past.
 from __future__ import annotations
 
 import copy
+import base64
 import datetime as dt
 import math
 import re
+import struct
+import zlib
 
 
 class ValidationError(ValueError):
@@ -135,6 +138,52 @@ def default_workspace():
     return {"salonName": "atelier", "accent": "#79536e", "defaultView": "auto", "density": "comfortable", "textSize": "normal", "showStats": True, "showIntro": True, "visibleStart": "10:00", "visibleEnd": "18:00"}
 
 
+def valid_salon_logo(value):
+    """A bounded, nonanimated PNG data URL; no external resource or executable image."""
+    if value is None:
+        return True
+    prefix = "data:image/png;base64,"
+    if not isinstance(value, str) or len(value) > 699074 or not value.startswith(prefix):
+        return False
+    encoded = value[len(prefix):]
+    if not encoded or len(encoded) % 4 or not re.fullmatch(r"[A-Za-z0-9+/]+={0,2}", encoded):
+        return False
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+        if len(raw) < 57 or len(raw) > 524288 or base64.b64encode(raw).decode("ascii") != encoded or raw[:8] != b"\x89PNG\r\n\x1a\n":
+            return False
+        uint = lambda at: struct.unpack_from(">I", raw, at)[0]
+        if uint(8) != 13 or raw[12:16] != b"IHDR" or not 1 <= uint(16) <= 512 or not 1 <= uint(20) <= 512:
+            return False
+        depths = {0: (1, 2, 4, 8, 16), 2: (8, 16), 3: (1, 2, 4, 8), 4: (8, 16), 6: (8, 16)}
+        if raw[24] not in depths.get(raw[25], ()) or raw[26] != 0 or raw[27] != 0 or raw[28] > 1:
+            return False
+        at, idat, palette = 8, False, False
+        while at + 12 <= len(raw):
+            size, kind = uint(at), raw[at + 4:at + 8]
+            end = at + 12 + size
+            if end > len(raw) or not re.fullmatch(b"[A-Za-z]{4}", kind) or at != 8 and kind == b"IHDR" or kind in (b"acTL", b"fcTL", b"fdAT"):
+                return False
+            if kind[:1].isupper() and kind not in (b"IHDR", b"PLTE", b"IDAT", b"IEND"):
+                return False
+            if zlib.crc32(raw[at + 4:at + 8 + size]) != uint(at + 8 + size):
+                return False
+            if kind == b"PLTE":
+                if idat or palette or not size or size > 768 or size % 3:
+                    return False
+                palette = True
+            if kind == b"IDAT":
+                if raw[25] == 3 and not palette:
+                    return False
+                idat = True
+            if kind == b"IEND":
+                return size == 0 and idat and end == len(raw)
+            at = end
+    except (ValueError, TypeError, UnicodeError, struct.error):
+        return False
+    return False
+
+
 def validate_settings(raw):
     r = obj(raw)
     if r.get("slotMinutes") not in (15, 30, 60) or isinstance(r.get("slotMinutes"), bool) or r.get("theme") not in ("light", "dark"):
@@ -183,6 +232,10 @@ def validate_settings(raw):
     if not name:
         fail()
     result["workspace"] = {"salonName": name, "accent": color(w.get("accent")), **{k: w[k] for k in ("defaultView", "density", "textSize", "showStats", "showIntro", "visibleStart", "visibleEnd")}}
+    if "logoData" in w:
+        if not valid_salon_logo(w["logoData"]):
+            fail("Logo-ul salonului trebuie să fie un PNG valid, maximum 512 × 512 și 512 KiB.")
+        result["workspace"]["logoData"] = w["logoData"]
     if "agendaRanges" in r:
         ranges = []
         for x in array(r["agendaRanges"], 1000):
@@ -352,6 +405,12 @@ def validate_client_transitions(previous, candidate):
             before = appointments.get(appointment["id"])
             if before is None or before["clientId"] != appointment["clientId"]:
                 fail("Nu poți adăuga sau reasigna o programare unui client șters. Istoricul existent rămâne păstrat.")
+
+
+def validate_logo_transition(previous, candidate):
+    """Legacy settings edits cannot implicitly erase an already shared logo choice."""
+    if "logoData" in previous["settings"]["workspace"] and "logoData" not in candidate["settings"]["workspace"]:
+        fail("Logo-ul salonului nu poate fi eliminat implicit. Actualizează aplicația; revenirea la logo-ul inițial se face explicit din Setări.")
 
 
 def retain_audit(previous, candidate):

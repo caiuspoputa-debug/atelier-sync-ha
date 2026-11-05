@@ -4,13 +4,13 @@ All API calls are `POST` with `Content-Type: application/json`. Text is UTF-8. R
 
 ## Status and registration
 
-`POST /v1/status {}` is public and returns only `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1"],workspaceId,initialized}`. `GET /` is a minimal public health page with no agenda data.
+`POST /v1/status {}` is public and returns only `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1","salon-logo-v1"],workspaceId,initialized}`. `GET /` is a minimal public health page with no agenda data.
 
 `POST /v1/register` accepts `{pairingKey,deviceId,role,name}`. `role` is `master` or `secondary`. IDs are nonempty strings up to 100 characters, and names are nonempty strings up to 150 characters. A valid configured pairing key is required. Re-registering an existing ID returns the same token; an authorized registration can update its name and role. Secondary devices can register before initialization.
 
-The result is `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1"],workspaceId,token,initialized}`. Authentication for sync is `Authorization: Bearer <token>`, bound to the registered `deviceId`. Changing the pairing key does not revoke prior tokens; deleting a device association does.
+The result is `{protocol:1,capabilities:["suppliers-v1","client-deletion-v1","salon-logo-v1"],workspaceId,token,initialized}`. Authentication for sync is `Authorization: Bearer <token>`, bound to the registered `deviceId`. Changing the pairing key does not revoke prior tokens; deleting a device association does.
 
-Atelier Sync 0.3.0 advertises `suppliers-v1` and `client-deletion-v1` on status, registration, and synchronization responses. New Android clients include `capabilities:["suppliers-v1","client-deletion-v1"]` on their requests and require this response capability before registration, bootstrap, joining, uploading operations, or accepting a reply. If it is absent, they must keep the local agenda and outbox intact and ask the user to update the HA application. This prevents older servers from accepting and stripping supplier information or deleted-client markers. Update every device before using client deletion: older clients do not understand deleted identities even though ordinary legacy operations remain supported. Older clients remain usable with ordinary legacy records; they are not globally rejected by the new server.
+Atelier Sync 0.3.0 introduced the globally required `suppliers-v1` and `client-deletion-v1` capabilities. Android clients require these two response capabilities before registration, bootstrap, joining, uploading operations, or accepting a reply. If either is absent, they keep the local agenda and outbox intact and ask the user to update HA. Version0.4.0 additionally advertises `salon-logo-v1`; it is required only when shared logo data is involved, as detailed below. Update every device before using client deletion or a shared logo: older clients do not understand the added fields, and conflicting edits are retained explicitly rather than silently accepted. Ordinary legacy entity operations remain usable on the new server.
 
 ## Synchronization
 
@@ -49,7 +49,7 @@ All changes and their receipt commit atomically. Independent later operations in
 ```json
 {
   "protocol": 1,
-  "capabilities": ["suppliers-v1","client-deletion-v1"],
+  "capabilities": ["suppliers-v1","client-deletion-v1","salon-logo-v1"],
   "workspaceId": "workspace-id",
   "initialized": true,
   "serverRevision": 2,
@@ -73,3 +73,28 @@ The server atomically records the initializer device, bootstrap ID, snapshot has
 `401` covers bad pairing keys or missing/invalid bearer tokens. `403` covers a token/device mismatch or a secondary initialization attempt. `409` covers workspace mismatch, missing initialization, and initialization reuse errors. `400` covers malformed JSON/request shape. `413` covers the body limit. Unknown endpoints return `404`.
 
 Registration, synchronization, and backup operations never need Home Assistant administrator tokens or its API.
+
+## Optional shared logo (`salon-logo-v1`, Atelier Sync 0.4.0)
+
+`settings.workspace.logoData` is absent for existing uncustomized workspaces, a
+strict `data:image/png;base64,...` string for a custom logo, or explicit `null` to
+restore the bundled mark. The string is preserved verbatim. It is at most699074
+characters including its22-character prefix and at most524288 decoded bytes;
+PNG dimensions are1–512 on each axis. Canonical base64, PNG signature, IHDR,
+supported color/depth header, chunk bounds/CRC and terminal IEND are checked.
+Animated PNG and unknown critical chunks are rejected. No external URL or SVG
+is accepted. No automatic migration adds this optional field.
+
+The server advertises `salon-logo-v1` in status/register/sync responses. New
+clients must check this capability before sending an agenda/bootstrap/queued
+settings operation that owns `logoData`, including explicit null. Do not require
+this capability globally for ordinary legacy agenda synchronization. Keep the
+local agenda and pending operations intact if the server lacks it.
+
+The field shares the existing atomic `settings` CAS entity. Competing settings
+changes conflict as usual. Once the live workspace owns `logoData`, a candidate
+that omits it is rejected atomically even with an exact before image; changing
+its value to null is the explicit supported reset. This protects against older
+clients that retain the server before-image but strip unknown fields on save.
+Legacy clients can still edit other entity types. JSON and HA/SQLite backups
+preserve the logo and reset marker using the same schema-1 state.

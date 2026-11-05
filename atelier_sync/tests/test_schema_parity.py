@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from validation import validate_state
 
-APP = Path(__file__).resolve().parents[2] / "salon-apk/app/src/main/assets/app.js"
+APP = next((p / "salon-apk/app/src/main/assets/app.js" for p in Path(__file__).resolve().parents if (p / "salon-apk/app/src/main/assets/app.js").is_file()), Path("missing-salon-source"))
 
 
 @unittest.skipUnless(shutil.which("node") and APP.is_file(), "Node and the sibling Android source are needed only for parity checks")
